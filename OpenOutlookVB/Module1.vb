@@ -1,4 +1,5 @@
-﻿Imports System.Reflection
+﻿Imports System.IO
+Imports System.Reflection
 Imports System.Runtime.InteropServices
 Imports Stimulsoft.Report
 Imports Stimulsoft.Report.Export
@@ -22,25 +23,41 @@ Module Module1
         Dim mailRecipient As Outlook.Recipient = Nothing
         Dim report As StiReport
 
-        Dim fullPath As String = "c:\Users\Steven\Documents\Reports\KleinBevestigingDatumTijd.mrt"
+        Try
+            report = New StiReport()
+            report.Load("c:\Users\Steven\Documents\Reports\KleinBevestigingDatumTijd.mrt")
+            report.Render(False)
 
-        report = New StiReport()
-        report.Load(fullPath)
-        report.Render(False)
+            Dim rtfSettings As StiRtfExportSettings = New StiRtfExportSettings()
+            Dim memoryStream = New MemoryStream()
+            rtfSettings.ImageQuality = 1.0F
 
-        Dim rtfSettings As StiRtfExportSettings = New StiRtfExportSettings()
-        rtfSettings.ImageQuality = 1.0F
-        report.ExportDocument(StiExportFormat.Rtf, "c:\Users\Steven\Documents\Reports\KleinBevestigingDatumTijd.rtf", rtfSettings)
-        Console.WriteLine("The export action is complete.", "Export Report")
+            report.ExportDocument(StiExportFormat.Rtf, memoryStream, rtfSettings)
+            Console.WriteLine("The export action is complete.", "Export Report")
 
-        mailItem = CType(oApp.CreateItem(Outlook.OlItemType.olMailItem), Outlook.MailItem)
-        mailItem.[To] = "stevenminken@hotmail.com"
-        mailItem.Subject = "A programatically generated e-mail"
-        mailItem.BodyFormat = Outlook.OlBodyFormat.olFormatRichText
-        mailItem.RTFBody = System.Text.Encoding.ASCII.GetBytes(My.Computer.FileSystem.ReadAllText("c:\Users\Steven\Documents\Reports\KleinBevestigingDatumTijd.rtf"))
-        mailItem.Display()
+            mailItem = CType(oApp.CreateItem(Outlook.OlItemType.olMailItem), Outlook.MailItem)
+            mailItem.[To] = "stevenminken@hotmail.com"
+            mailItem.Subject = "A programatically generated e-mail"
+            mailItem.BodyFormat = Outlook.OlBodyFormat.olFormatRichText
+            mailItem.RTFBody = memoryStream.ToArray()
+            memoryStream.Flush()
+            mailItem.Display()
 
-        Return Nothing
+            Return Nothing
+
+        Catch ex As Exception
+            Console.WriteLine(ex.Message)
+            Console.WriteLine("Stack Trace: " & vbCrLf & ex.StackTrace)
+        Finally
+            If (mailRecipient IsNot Nothing) Then Marshal.ReleaseComObject(mailRecipient)
+            If (mailRecipients IsNot Nothing) Then Marshal.ReleaseComObject(mailRecipients)
+            If (mailItem IsNot Nothing) Then Marshal.ReleaseComObject(mailItem)
+
+        End Try
+
+        ' Ter info nodig voor eerst naar file schrijven en weer lezen:
+        ' report.ExportDocument(StiExportFormat.Rtf, "c:\Users\Steven\Documents\Reports\KleinBevestigingDatumTijd.rtf", rtfSettings)
+        ' mailItem.RTFBody = System.Text.Encoding.ASCII.GetBytes(My.Computer.FileSystem.ReadAllText("c:\Users\Steven\Documents\Reports\KleinBevestigingDatumTijd.rtf"))
 
     End Function
 
